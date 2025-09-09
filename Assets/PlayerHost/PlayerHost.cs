@@ -43,6 +43,7 @@ public class PlayerHost : MonoBehaviour
         {
             action?.Invoke();
         }
+
         if (protocolUDP.isServer)
         {
             while (positionQueue.TryDequeue(out Vector3 newPosition))

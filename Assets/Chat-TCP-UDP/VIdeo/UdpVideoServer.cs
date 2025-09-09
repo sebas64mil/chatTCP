@@ -1,18 +1,12 @@
 using System;
-using System.Net;
 using System.Net.Sockets;
-using TMPro;
-using Unity.VisualScripting;
+using System.Net;
 using UnityEngine;
-using UnityEngine.UI;
-using static System.Net.Mime.MediaTypeNames;
 
-public class UDPServer : MonoBehaviour
+public class UdpVideoServer : MonoBehaviour
 {
     private UdpClient udpServer; // UDP client to handle network communication
     private IPEndPoint remoteEndPoint; // Endpoint to identify the remote client
-
-    Texture2D receivedTexture = new Texture2D(480, 270, TextureFormat.RGB24, false);
 
     public bool isServerRunning = false; // Flag to check if the server is running
 
@@ -20,25 +14,29 @@ public class UDPServer : MonoBehaviour
     {
         udpServer = new UdpClient(port); // Initializes the UDP client to listen on the given port
         remoteEndPoint = new IPEndPoint(IPAddress.Any, port); // Configures the endpoint to accept messages from any IP address on the given port.
-        Debug.Log("Server started. Waiting for messages...");
-        udpServer.BeginReceive(ReceiveData, null); // Asynchronous data reception begins
+        Debug.Log("Server started. Waiting for client Handshake");
+        udpServer.BeginReceive(ReceiveHandshake, null); // Asynchronous data reception begins
         isServerRunning = true; // Sets the server running flag to true
     }
 
-    private void ReceiveData(IAsyncResult result)
+    private void ReceiveHandshake(IAsyncResult result)
     {
         byte[] receivedBytes = udpServer.EndReceive(result, ref remoteEndPoint); // Completes data reception and gets the received bytes.
         string receivedMessage = System.Text.Encoding.UTF8.GetString(receivedBytes); // Converts received bytes to a string
-        Debug.Log("Received from client: " + receivedMessage);
-        udpServer.BeginReceive(ReceiveData, null); // Continues to receive data asynchronously
+        Debug.Log("Received handshake from client: " + remoteEndPoint);
     }
 
-    public void SendData(string message)
+    public void SendImage(Texture2D texture, int jpgQuality = 30)
     {
-        byte[] sendBytes = System.Text.Encoding.UTF8.GetBytes(message); // Converts the message to a byte array
-        udpServer.Send(sendBytes, sendBytes.Length, remoteEndPoint); // Sends bytes to the remote client using UDP
-        Debug.Log("Sent to client: " + message);
+        byte[] jpgBytes = texture.EncodeToJPG(jpgQuality);
+        try
+        {
+            udpServer.Send(jpgBytes, jpgBytes.Length, remoteEndPoint);
+            Debug.Log($"[TX] enviado {jpgBytes.Length} bytes");
+        }
+        catch (SocketException ex)
+        {
+            Debug.LogError($"Error al enviar UDP: {ex.SocketErrorCode} - {ex.Message}");
+        }
     }
-
-    
 }
